@@ -1,21 +1,27 @@
-# Use a base image with Maven and Java
-FROM maven:3.6.3-jdk-8 AS build
-WORKDIR /app
+# Base image with Ubuntu and OpenJDK
+FROM ubuntu:latest
 
-# Copy the Maven project and build the application
-COPY . .
-RUN mvn clean package
+# Update package lists and install necessary tools
+RUN apt-get update && \
+    apt-get install -y openjdk-11-jdk wget unzip && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Create a separate lightweight container to run the application
-FROM adoptopenjdk/openjdk8:alpine
-WORKDIR /app
+# Download and install IntelliJ IDEA Community Edition
+RUN wget -O /tmp/intellij.tar.gz "https://download.jetbrains.com/idea/ideaIC-2021.3.tar.gz" && \
+    tar -xzf /tmp/intellij.tar.gz -C /opt/ && \
+    rm /tmp/intellij.tar.gz
 
-# Copy the packaged JAR file from the build container to the current container
-COPY --from=build /app/target/Hotel-Reservation-Postgres-0.0.1-SNAPSHOT.jar /app/app.jar
+# Set environment variables
+ENV JAVA_HOME /usr/lib/jvm/java-11-openjdk-amd64
+ENV PATH $PATH:/opt/idea-IC-*/bin
 
-# Expose the port that your Spring Boot application uses (default is 8080)
-EXPOSE 8080
+# Set up a volume for project files
+VOLUME ["/project"]
 
-# Command to run the Spring Boot application when the container starts
-CMD ["java", "-jar", "app.jar"]
+# Set the working directory
+WORKDIR /project
+
+# Start IntelliJ IDEA when the container starts
+CMD ["idea.sh"]
 
